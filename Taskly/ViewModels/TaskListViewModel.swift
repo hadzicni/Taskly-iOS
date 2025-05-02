@@ -1,14 +1,8 @@
 import Foundation
 import Observation
 
-enum TaskFilter: String, CaseIterable, Identifiable {
-    case all = "All"
-    case today = "Today"
-
-    var id: String { self.rawValue }
-}
-
 enum TaskSortOption: String, CaseIterable, Identifiable {
+    case manual = "Manual"
     case dueDate = "Due Date"
     case title = "Title"
     case status = "Status"
@@ -16,9 +10,19 @@ enum TaskSortOption: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 }
 
+enum TaskSection: String, CaseIterable, Identifiable {
+    case overdue = "Overdue"
+    case today = "Today"
+    case upcoming = "Upcoming"
+    case noDate = "No Due Date"
+
+    var id: String { self.rawValue }
+}
+
 @Observable
 class TaskListViewModel {
-    var currentSort: TaskSortOption = .dueDate
+    var currentSort: TaskSortOption = .manual
+    var showCompleted: Bool = true
 
     var tasks: [Task] = [] {
         didSet {
@@ -35,33 +39,50 @@ class TaskListViewModel {
         loadTasks()
     }
 
-    func filteredTasks(for filter: TaskFilter) -> [Task] {
-        let filtered: [Task] = {
-            switch filter {
-            case .all:
-                return tasks
-            case .today:
-                return tasks.filter {
-                    guard let due = $0.dueDate else { return false }
-                    return Calendar.current.isDateInToday(due)
-                }
-            }
-        }()
+    func filteredTasks(on date: Date? = nil) -> [Task] {
+        let base = tasks.filter { showCompleted || !$0.isCompleted }
 
-        return sortTasks(filtered)
+        if let date = date {
+            return base.filter {
+                guard let due = $0.dueDate else { return false }
+                return Calendar.current.isDate(due, inSameDayAs: date)
+            }
+        }
+
+        return base
     }
 
-    private func sortTasks(_ tasks: [Task]) -> [Task] {
-        switch currentSort {
-        case .dueDate:
-            return tasks.sorted {
-                ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture)
+    func groupedTasks(on date: Date? = nil) -> [TaskSection: [Task]] {
+        let filtered = filteredTasks(on: date)
+        let now = Date()
+        let calendar = Calendar.current
+
+        var grouped: [TaskSection: [Task]] = [
+            .overdue: [],
+            .today: [],
+            .upcoming: [],
+            .noDate: []
+        ]
+
+        for task in filtered {
+            if let due = task.dueDate {
+                if calendar.isDateInToday(due) {
+                    grouped[.today]?.append(task)
+                } else if due < now {
+                    grouped[.overdue]?.append(task)
+                } else {
+                    grouped[.upcoming]?.append(task)
+                }
+            } else {
+                grouped[.noDate]?.append(task)
             }
-        case .title:
-            return tasks.sorted { $0.title.lowercased() < $1.title.lowercased() }
-        case .status:
-            return tasks.sorted { !$0.isCompleted && $1.isCompleted }
         }
+
+        return grouped
+    }
+
+    func moveTask(from source: IndexSet, to destination: Int) {
+        tasks.move(fromOffsets: source, toOffset: destination)
     }
 
     func addTask(title: String, dueDate: Date? = nil) {

@@ -5,23 +5,30 @@ struct TaskRowView: View {
     let toggle: () -> Void
 
     var body: some View {
-        HStack {
+        HStack(alignment: .top, spacing: 12) {
             Button(action: toggle) {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(task.isCompleted ? .green : .gray)
+                    .font(.title3)
+                    .foregroundStyle(task.isCompleted ? .green : .gray)
             }
 
-            Text(task.title)
-                .strikethrough(task.isCompleted)
-                .foregroundColor(task.isCompleted ? .gray : .primary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(task.title)
+                    .font(.body)
+                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
+                    .strikethrough(task.isCompleted, color: .secondary)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+
+                if let due = task.dueDate {
+                    Text(due.formatted(date: .abbreviated, time: .omitted))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             Spacer()
-
-            if let due = task.dueDate {
-                Text(due.formatted(date: .abbreviated, time: .omitted))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
         }
+        .padding(.vertical, 6)
     }
 }
