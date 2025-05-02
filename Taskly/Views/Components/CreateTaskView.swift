@@ -1,19 +1,11 @@
 import SwiftUI
 
-struct EditTaskView: View {
-    let task: Task
-    var onSave: (String, Date?) -> Void
+struct CreateTaskView: View {
+    var onCreate: (String, Date?) -> Void
 
-    @State private var title: String
-    @State private var dueDate: Date?
+    @State private var title: String = ""
+    @State private var dueDate: Date? = Date()
     @Environment(\.dismiss) private var dismiss
-
-    init(task: Task, onSave: @escaping (String, Date?) -> Void) {
-        self.task = task
-        self.onSave = onSave
-        _title = State(initialValue: task.title)
-        _dueDate = State(initialValue: task.dueDate)
-    }
 
     var body: some View {
         NavigationStack {
@@ -33,14 +25,14 @@ struct EditTaskView: View {
                 }
 
                 Section {
-                    Button("Save") {
-                        onSave(title, dueDate)
+                    Button("Create") {
+                        onCreate(title, dueDate)
                         dismiss()
                     }
                     .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            .navigationTitle("Edit Task")
+            .navigationTitle("New Task")
             .navigationBarTitleDisplayMode(.inline)
         }
     }

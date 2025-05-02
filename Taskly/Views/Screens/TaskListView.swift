@@ -3,14 +3,13 @@ import SwiftUI
 struct TaskListView: View {
     @Bindable var viewModel: TaskListViewModel
     @Namespace private var weekSelectorAnimation
-    @State private var newTaskTitle: String = ""
-    @State private var newDueDate: Date = Date()
     @State private var editingTask: Task? = nil
     @State private var selectedSort: TaskSortOption = .title
     @State private var selectedDate: Date? = nil
     @State private var weekOffset: Int = 0
     @State private var showDatePicker = false
     @State private var tempSelectedDate = Date()
+    @State private var showCreateSheet = false
 
     var body: some View {
         NavigationStack {
@@ -43,7 +42,6 @@ struct TaskListView: View {
                     Spacer()
                 }
                 .padding(.horizontal)
-
                 .popover(isPresented: $showDatePicker) {
                     VStack(spacing: 16) {
                         DatePicker("Select Week", selection: $tempSelectedDate, displayedComponents: .date)
@@ -152,26 +150,20 @@ struct TaskListView: View {
 
                 Divider()
 
-                HStack(spacing: 8) {
-                    TextField("New Task", text: $newTaskTitle)
-                        .textFieldStyle(.roundedBorder)
-
-                    DatePicker("", selection: $newDueDate, displayedComponents: .date)
-                        .labelsHidden()
-                        .frame(maxWidth: 120)
-
-                    Button(action: {
-                        guard !newTaskTitle.isEmpty else { return }
-                        viewModel.addTask(title: newTaskTitle, dueDate: newDueDate)
-                        newTaskTitle = ""
-                        newDueDate = Date()
-                    }) {
-                        Image(systemName: "plus")
-                            .imageScale(.large)
-                    }
-                    .buttonStyle(.borderedProminent)
+                Button {
+                    showCreateSheet = true
+                } label: {
+                    Label("New Task", systemImage: "plus")
+                        .labelStyle(.titleAndIcon)
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.borderedProminent)
                 .padding()
+                .sheet(isPresented: $showCreateSheet) {
+                    CreateTaskView { title, dueDate in
+                        viewModel.addTask(title: title, dueDate: dueDate)
+                    }
+                }
             }
             .navigationTitle("Tasks")
             .toolbar {
@@ -196,7 +188,6 @@ struct TaskListView: View {
         let today = Date()
         let offsetDate = calendar.date(byAdding: .weekOfYear, value: weekOffset, to: today)!
         let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: offsetDate))!
-
         return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: startOfWeek) }
     }
 

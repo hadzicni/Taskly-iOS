@@ -11,14 +11,14 @@ enum NotificationService {
     }
 
     static func scheduleNotification(for task: Task) {
-        guard let dueDate = task.dueDate else { return }
+        guard let dueDate = task.dueDate, dueDate > Date() else { return }
 
         let content = UNMutableNotificationContent()
         content.title = "Task Reminder"
         content.body = task.title
         content.sound = .default
 
-        let triggerDate = Calendar.current.dateComponents([.year, .month, .day], from: dueDate)
+        let triggerDate = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: dueDate)
         let trigger = UNCalendarNotificationTrigger(dateMatching: triggerDate, repeats: false)
 
         let request = UNNotificationRequest(
