@@ -39,21 +39,28 @@ class TaskListViewModel {
         loadTasks()
     }
 
-    func filteredTasks(on date: Date? = nil) -> [Task] {
+    func filteredTasks(on date: Date?, searchText: String = "") -> [Task] {
         let base = tasks.filter { showCompleted || !$0.isCompleted }
 
+        let dateFiltered: [Task]
         if let date = date {
-            return base.filter {
-                guard let due = $0.dueDate else { return false }
+            dateFiltered = base.filter { task in
+                guard let due = task.dueDate else { return false }
                 return Calendar.current.isDate(due, inSameDayAs: date)
             }
+        } else {
+            dateFiltered = base
         }
 
-        return base
+        let searched = searchText.isEmpty
+            ? dateFiltered
+            : dateFiltered.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+
+        return sortTasks(searched)
     }
 
-    func groupedTasks(on date: Date? = nil) -> [TaskSection: [Task]] {
-        let filtered = filteredTasks(on: date)
+    func groupedTasks(on date: Date? = nil, searchText: String = "") -> [TaskSection: [Task]] {
+        let filtered = filteredTasks(on: date, searchText: searchText)
         let now = Date()
         let calendar = Calendar.current
 
@@ -85,16 +92,36 @@ class TaskListViewModel {
         tasks.move(fromOffsets: source, toOffset: destination)
     }
 
-    func addTask(title: String, dueDate: Date? = nil) {
-        let newTask = Task(title: title, dueDate: dueDate)
+    private func sortTasks(_ tasks: [Task]) -> [Task] {
+        switch currentSort {
+        case .manual:
+            return tasks
+        case .dueDate:
+            return tasks.sorted {
+                ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture)
+            }
+        case .title:
+            return tasks.sorted {
+                $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
+            }
+        case .status:
+            return tasks.sorted {
+                !$0.isCompleted && $1.isCompleted
+            }
+        }
+    }
+
+    func addTask(title: String, dueDate: Date? = nil, notes: String? = nil) {
+        let newTask = Task(title: title, dueDate: dueDate, notes: notes)
         tasks.append(newTask)
         NotificationService.scheduleNotification(for: newTask)
     }
 
-    func updateTask(_ task: Task, newTitle: String, newDueDate: Date?) {
+    func updateTask(_ task: Task, newTitle: String, newDueDate: Date?, newNotes: String?) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[index].title = newTitle
             tasks[index].dueDate = newDueDate
+            tasks[index].notes = newNotes
 
             NotificationService.removeNotification(for: task.id)
             NotificationService.scheduleNotification(for: tasks[index])
