@@ -112,16 +112,15 @@ class TaskListViewModel {
     }
 
     func addTask(title: String, dueDate: Date? = nil, notes: String? = nil) {
-        let newTask = Task(title: title, dueDate: dueDate, notes: notes)
+        let newTask = Task(title: title, dueDate: dueDate)
         tasks.append(newTask)
         NotificationService.scheduleNotification(for: newTask)
     }
 
-    func updateTask(_ task: Task, newTitle: String, newDueDate: Date?, newNotes: String?) {
+    func updateTask(_ task: Task, newTitle: String, newDueDate: Date?) {
         if let index = tasks.firstIndex(where: { $0.id == task.id }) {
             tasks[index].title = newTitle
             tasks[index].dueDate = newDueDate
-            tasks[index].notes = newNotes
 
             NotificationService.removeNotification(for: task.id)
             NotificationService.scheduleNotification(for: tasks[index])
