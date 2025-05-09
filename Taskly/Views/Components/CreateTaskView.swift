@@ -9,29 +9,46 @@ struct CreateTaskView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section(header: Text("Title")) {
-                    TextField("Task Title", text: $title)
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Task Title")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    TextField("Enter title...", text: $title)
+                        .textFieldStyle(.roundedBorder)
                 }
 
-                Section(header: Text("Due Date & Time")) {
-                    DatePicker("Due", selection: Binding(get: {
-                        dueDate ?? Date()
-                    }, set: { newValue in
-                        dueDate = newValue
-                    }), displayedComponents: [.date, .hourAndMinute])
-                        .labelsHidden()
-                        .datePickerStyle(.compact)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Due Date & Time")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    DatePicker(
+                        "",
+                        selection: Binding(get: {
+                            dueDate ?? Date()
+                        }, set: { newValue in
+                            dueDate = newValue
+                        }),
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .datePickerStyle(.graphical)
                 }
 
-                Section {
-                    Button("Create") {
-                        onCreate(title, dueDate)
-                        dismiss()
-                    }
-                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                Spacer()
+
+                Button {
+                    onCreate(title.trimmingCharacters(in: .whitespacesAndNewlines), dueDate)
+                    dismiss()
+                } label: {
+                    Label("Create Task", systemImage: "plus")
+                        .frame(maxWidth: .infinity)
                 }
+                .buttonStyle(.borderedProminent)
+                .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
+            .padding()
             .navigationTitle("New Task")
             .navigationBarTitleDisplayMode(.inline)
         }

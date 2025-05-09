@@ -6,8 +6,7 @@ struct HorizontalDateStrip: View {
     let taskCounts: [Date: Int]
     let onSelect: (Date) -> Void
 
-    @Namespace private var animation
-    @State private var scrollProxy: ScrollViewProxy?
+    @State private var initialScrollDone = false
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -18,78 +17,69 @@ struct HorizontalDateStrip: View {
                         let isToday = Calendar.current.isDateInToday(date)
                         let taskCount = taskCounts[date, default: 0]
 
-                        Button {
-                            withAnimation(.spring()) {
+                        VStack(spacing: 6) {
+                            Button(action: {
                                 onSelect(date)
-                            }
-                        } label: {
-                            VStack(spacing: 8) {
-                                ZStack {
-                                    if isSelected {
-                                        Capsule()
-                                            .fill(Color.accentColor)
-                                            .matchedGeometryEffect(id: "selection", in: animation)
-                                            .frame(width: 56, height: 48)
-                                    }
+                            }) {
+                                VStack(spacing: 2) {
+                                    Text(formattedWeekday(for: date))
+                                        .font(.caption2)
+                                        .foregroundColor(isSelected ? .white : .secondary)
 
-                                    Text(formattedLabel(for: date))
+                                    Text(formattedDay(for: date))
                                         .font(.subheadline)
                                         .fontWeight(.medium)
-                                        .multilineTextAlignment(.center)
-                                        .frame(width: 56)
-                                        .foregroundColor(isSelected ? .white : (isToday ? .accentColor : .primary))
-                                        .overlay(
-                                            Circle()
-                                                .strokeBorder(Color.accentColor.opacity((isToday && !isSelected) ? 0.6 : 0), lineWidth: 1.5)
-                                                .frame(width: 56, height: 48)
-                                        )
+                                        .foregroundColor(isSelected ? .white : .primary)
                                 }
-
-                                if taskCount > 0 {
-                                    Text("\(taskCount)")
-                                        .font(.caption2)
-                                        .padding(4)
-                                        .background(
-                                            Circle()
-                                                .fill(isSelected ? Color.white.opacity(0.3) : Color.accentColor.opacity(0.15))
-                                        )
-                                        .foregroundColor(isSelected ? .white : .accentColor)
-                                } else {
-                                    Spacer().frame(height: 18)
-                                }
+                                .frame(width: 48, height: 48)
+                                .background(
+                                    Circle()
+                                        .fill(isSelected ? Color.accentColor : (isToday ? Color.accentColor.opacity(0.1) : Color.clear))
+                                )
                             }
-                            .frame(width: 64)
+                            .buttonStyle(.plain)
+
+                            if taskCount > 0 {
+                                Text("\(taskCount)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .id(date) // for ScrollViewReader
+                        .id(date) // wichtig für ScrollViewReader
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
                 .onAppear {
-                    scrollProxy = proxy
-                    scrollToInitialDate(proxy: proxy)
-                }
-                .onChange(of: dates) { _ in
-                    scrollToInitialDate(proxy: proxy)
+                    if !initialScrollDone {
+                        scrollToToday(proxy: proxy)
+                        initialScrollDone = true
+                    }
                 }
             }
         }
-        .frame(height: 88)
+        .frame(height: 84)
     }
 
-    private func formattedLabel(for date: Date) -> String {
+    private func formattedWeekday(for date: Date) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale.current
-        formatter.setLocalizedDateFormatFromTemplate("E d")
-        return formatter.string(from: date).replacingOccurrences(of: " ", with: "\n")
+        formatter.setLocalizedDateFormatFromTemplate("E")
+        return formatter.string(from: date)
     }
 
-    private func scrollToInitialDate(proxy: ScrollViewProxy) {
-        let targetDate = selectedDate ?? Date()
-        DispatchQueue.main.async {
-            withAnimation {
-                proxy.scrollTo(dates.first(where: { Calendar.current.isDate($0, inSameDayAs: targetDate) }), anchor: .center)
+    private func formattedDay(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("d")
+        return formatter.string(from: date)
+    }
+
+    private func scrollToToday(proxy: ScrollViewProxy) {
+        let today = Date()
+        if let target = dates.first(where: { Calendar.current.isDate($0, inSameDayAs: today) }) {
+            DispatchQueue.main.async {
+                withAnimation {
+                    proxy.scrollTo(target, anchor: .center)
+                }
             }
         }
     }

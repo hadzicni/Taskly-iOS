@@ -6,7 +6,17 @@ struct TasklyApp: App {
 
     var body: some Scene {
         WindowGroup {
-            TaskListView(viewModel: viewModel)
+            TabView {
+                TaskListView(viewModel: viewModel)
+                    .tabItem {
+                        Label("Tasks", systemImage: "checkmark.circle")
+                    }
+
+                SettingsView(viewModel: viewModel)
+                    .tabItem {
+                        Label("Settings", systemImage: "gearshape")
+                    }
+            }
         }
     }
 }

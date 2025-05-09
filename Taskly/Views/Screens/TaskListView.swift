@@ -4,7 +4,6 @@ struct TaskListView: View {
     @Bindable var viewModel: TaskListViewModel
     @Namespace private var weekSelectorAnimation
     @State private var editingTask: Task? = nil
-    @State private var selectedSort: TaskSortOption = .title
     @State private var selectedDate: Date? = nil
     @State private var weekOffset: Int = 0
     @State private var showDatePicker = false
@@ -14,19 +13,6 @@ struct TaskListView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 12) {
-
-                HStack {
-                    Picker("Sort by", selection: $selectedSort) {
-                        ForEach(TaskSortOption.allCases) { sort in
-                            Text(sort.rawValue).tag(sort)
-                        }
-                    }
-                    .pickerStyle(.menu)
-
-                    Spacer()
-                }
-                .padding(.horizontal)
-
                 HStack {
                     Button {
                         tempSelectedDate = selectedDate ?? Date()
@@ -83,9 +69,7 @@ struct TaskListView: View {
                 }
 
                 HStack(spacing: 8) {
-                    Button(action: {
-                        withAnimation { weekOffset -= 1 }
-                    }) {
+                    Button(action: { withAnimation { weekOffset -= 1 } }) {
                         Image(systemName: "chevron.left")
                     }
 
@@ -96,9 +80,7 @@ struct TaskListView: View {
                         onSelect: { date in selectedDate = date }
                     )
 
-                    Button(action: {
-                        withAnimation { weekOffset += 1 }
-                    }) {
+                    Button(action: { withAnimation { weekOffset += 1 } }) {
                         Image(systemName: "chevron.right")
                     }
 
@@ -141,7 +123,7 @@ struct TaskListView: View {
                                         }
                                     }
                                     .onDelete(perform: viewModel.deleteTask)
-                                    .onMove(perform: selectedSort == .manual ? moveTask : nil)
+                                    .onMove(perform: moveTask)
                                 }
                             }
                         }
@@ -167,9 +149,7 @@ struct TaskListView: View {
             }
             .navigationTitle("Tasks")
             .toolbar {
-                if selectedSort == .manual {
-                    EditButton()
-                }
+                EditButton()
             }
             .sheet(item: $editingTask) { task in
                 EditTaskView(task: task) { newTitle, newDueDate in
@@ -231,7 +211,6 @@ struct TaskListView: View {
     }
 
     private func moveTask(from source: IndexSet, to destination: Int) {
-        guard viewModel.currentSort == .manual else { return }
         viewModel.moveTask(from: source, to: destination)
     }
 

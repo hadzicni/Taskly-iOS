@@ -1,15 +1,6 @@
 import Foundation
 import Observation
 
-enum TaskSortOption: String, CaseIterable, Identifiable {
-    case manual = "Manual"
-    case dueDate = "Due Date"
-    case title = "Title"
-    case status = "Status"
-
-    var id: String { self.rawValue }
-}
-
 enum TaskSection: String, CaseIterable, Identifiable {
     case overdue = "Overdue"
     case today = "Today"
@@ -21,9 +12,7 @@ enum TaskSection: String, CaseIterable, Identifiable {
 
 @Observable
 class TaskListViewModel {
-    var currentSort: TaskSortOption = .manual
     var showCompleted: Bool = true
-
     var tasks: [Task] = [] {
         didSet {
             saveTasks()
@@ -52,11 +41,9 @@ class TaskListViewModel {
             dateFiltered = base
         }
 
-        let searched = searchText.isEmpty
+        return searchText.isEmpty
             ? dateFiltered
             : dateFiltered.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
-
-        return sortTasks(searched)
     }
 
     func groupedTasks(on date: Date? = nil, searchText: String = "") -> [TaskSection: [Task]] {
@@ -90,25 +77,6 @@ class TaskListViewModel {
 
     func moveTask(from source: IndexSet, to destination: Int) {
         tasks.move(fromOffsets: source, toOffset: destination)
-    }
-
-    private func sortTasks(_ tasks: [Task]) -> [Task] {
-        switch currentSort {
-        case .manual:
-            return tasks
-        case .dueDate:
-            return tasks.sorted {
-                ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture)
-            }
-        case .title:
-            return tasks.sorted {
-                $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
-            }
-        case .status:
-            return tasks.sorted {
-                !$0.isCompleted && $1.isCompleted
-            }
-        }
     }
 
     func addTask(title: String, dueDate: Date? = nil, notes: String? = nil) {
