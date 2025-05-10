@@ -2,7 +2,9 @@ import SwiftUI
 
 struct TaskListView: View {
     @Bindable var viewModel: TaskListViewModel
+    @AppStorage("userName") private var userName: String = ""
     @Namespace private var weekSelectorAnimation
+
     @State private var editingTask: Task? = nil
     @State private var selectedDate: Date? = nil
     @State private var weekOffset: Int = 0
@@ -12,126 +14,114 @@ struct TaskListView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 12) {
-                HStack {
-                    Button {
-                        tempSelectedDate = selectedDate ?? Date()
-                        showDatePicker = true
-                    } label: {
-                        Label(currentWeekLabel(), systemImage: "calendar")
-                            .labelStyle(.titleAndIcon)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+            VStack(spacing: 0) {
+                List {
+                    // 👋 Begrüßung
+                    Section {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("👋 Hello,")
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                            Text(userName.isEmpty ? "you" : userName)
+                                .font(.largeTitle.bold())
+                        }
+                        .padding(.vertical, 8)
                     }
-                    .buttonStyle(.plain)
 
-                    Spacer()
-                }
-                .padding(.horizontal)
-                .popover(isPresented: $showDatePicker) {
-                    VStack(spacing: 16) {
-                        DatePicker("Select Week", selection: $tempSelectedDate, displayedComponents: .date)
-                            .datePickerStyle(.graphical)
-                            .padding()
-
-                        Text(weekInfo(for: tempSelectedDate))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(weekDates(for: tempSelectedDate), id: \.self) { date in
-                                HStack {
-                                    Text(shortDateLabel(for: date))
-                                    Spacer()
-                                    Text("\(taskCount(on: date)) task\(taskCount(on: date) == 1 ? "" : "s")")
-                                        .foregroundStyle(.secondary)
+                    // 📅 Kalenderbereich
+                    Section {
+                        VStack(spacing: 12) {
+                            Button {
+                                tempSelectedDate = selectedDate ?? Date()
+                                showDatePicker = true
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "calendar")
+                                    Text(currentWeekLabel())
+                                        .fontWeight(.medium)
                                 }
+                                .font(.subheadline)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.accentColor.opacity(0.2), lineWidth: 1)
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.primary)
+
+                            HStack(spacing: 12) {
+                                Button { withAnimation { weekOffset -= 1 } } label: {
+                                    Image(systemName: "chevron.left")
+                                }
+
+                                HorizontalDateStrip(
+                                    dates: currentWeekDates(),
+                                    selectedDate: selectedDate,
+                                    taskCounts: taskCountsForCurrentWeek(),
+                                    onSelect: { date in selectedDate = date }
+                                )
+
+                                Button { withAnimation { weekOffset += 1 } } label: {
+                                    Image(systemName: "chevron.right")
+                                }
+
+                                Button("Today") {
+                                    selectedDate = Date()
+                                    weekOffset = 0
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(selectedDate != nil && Calendar.current.isDateInToday(selectedDate!))
                             }
                         }
-                        .font(.caption)
-                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                    }
 
-                        Button("Go to Week") {
-                            withAnimation {
-                                selectedDate = tempSelectedDate
-                                weekOffset = calculateWeekOffset(from: tempSelectedDate)
-                            }
-                            showDatePicker = false
+                    // 📝 Aufgabenliste
+                    let tasks = viewModel.filteredTasks(on: selectedDate)
+                    if tasks.isEmpty {
+                        Section {
+                            ContentUnavailableView("No Tasks", systemImage: "checkmark.circle")
                         }
-                        .buttonStyle(.borderedProminent)
-
-                        Button("Cancel", role: .cancel) {
-                            showDatePicker = false
-                        }
-                    }
-                    .frame(width: 320)
-                    .padding()
-                }
-
-                HStack(spacing: 8) {
-                    Button(action: { withAnimation { weekOffset -= 1 } }) {
-                        Image(systemName: "chevron.left")
-                    }
-
-                    HorizontalDateStrip(
-                        dates: currentWeekDates(),
-                        selectedDate: selectedDate,
-                        taskCounts: taskCountsForCurrentWeek(),
-                        onSelect: { date in selectedDate = date }
-                    )
-
-                    Button(action: { withAnimation { weekOffset += 1 } }) {
-                        Image(systemName: "chevron.right")
-                    }
-
-                    Button("Today") {
-                        selectedDate = Date()
-                        weekOffset = 0
-                    }
-                    .buttonStyle(.bordered)
-
-                    if selectedDate != nil {
-                        Button {
-                            selectedDate = nil
-                        } label: {
-                            Image(systemName: "xmark.circle")
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Clear selected date")
-                    }
-                }
-                .padding(.horizontal)
-
-                let tasks = viewModel.filteredTasks(on: selectedDate)
-
-                if tasks.isEmpty {
-                    ContentUnavailableView("No Tasks", systemImage: "checkmark.circle")
-                } else {
-                    List {
+                    } else {
                         ForEach(TaskSection.allCases) { section in
                             let sectionTasks = viewModel.groupedTasks(on: selectedDate)[section, default: []]
-
                             if !sectionTasks.isEmpty {
                                 Section(header: Text(section.rawValue)) {
                                     ForEach(sectionTasks) { task in
-                                        Button {
-                                            editingTask = task
-                                        } label: {
-                                            TaskRowView(task: task, toggle: {
-                                                viewModel.toggleCompletion(for: task)
-                                            })
+                                        TaskRowView(task: task, toggle: {
+                                            viewModel.toggleCompletion(for: task)
+                                        })
+                                        .swipeActions {
+                                            Button(role: .destructive) {
+                                                if let index = viewModel.tasks.firstIndex(where: { $0.id == task.id }) {
+                                                    viewModel.deleteTask(at: IndexSet(integer: index))
+                                                }
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
+                                            }
+
+                                            Button {
+                                                editingTask = task
+                                            } label: {
+                                                Label("Edit", systemImage: "pencil")
+                                            }
+                                            .tint(.blue)
                                         }
                                     }
-                                    .onDelete(perform: viewModel.deleteTask)
-                                    .onMove(perform: moveTask)
                                 }
                             }
                         }
                     }
                 }
+                .listStyle(.insetGrouped)
 
                 Divider()
 
+                // ➕ Fixierter New Task Button
                 Button {
                     showCreateSheet = true
                 } label: {
@@ -141,15 +131,16 @@ struct TaskListView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .padding()
-                .sheet(isPresented: $showCreateSheet) {
-                    CreateTaskView { title, dueDate in
-                        viewModel.addTask(title: title, dueDate: dueDate)
-                    }
-                }
+                .background(.ultraThinMaterial)
             }
-            .navigationTitle("Tasks")
-            .toolbar {
-                EditButton()
+            .navigationTitle("")
+            .popover(isPresented: $showDatePicker) {
+                DatePickerPopover
+            }
+            .sheet(isPresented: $showCreateSheet) {
+                CreateTaskView { title, dueDate in
+                    viewModel.addTask(title: title, dueDate: dueDate)
+                }
             }
             .sheet(item: $editingTask) { task in
                 EditTaskView(task: task) { newTitle, newDueDate in
@@ -157,18 +148,60 @@ struct TaskListView: View {
                     editingTask = nil
                 }
             }
-        }
-        .onAppear {
-            NotificationService.requestAuthorization()
+            .onAppear {
+                NotificationService.requestAuthorization()
+            }
         }
     }
 
+    // ⏱ Popover für Datumsauswahl
+    private var DatePickerPopover: some View {
+        VStack(spacing: 16) {
+            DatePicker("Select Week", selection: $tempSelectedDate, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .padding()
+
+            Text(weekInfo(for: tempSelectedDate))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(weekDates(for: tempSelectedDate), id: \.self) { date in
+                    HStack {
+                        Text(shortDateLabel(for: date))
+                        Spacer()
+                        Text("\(taskCount(on: date)) task\(taskCount(on: date) == 1 ? "" : "s")")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .font(.caption)
+            .padding(.horizontal)
+
+            Button("Go to Week") {
+                withAnimation {
+                    selectedDate = tempSelectedDate
+                    weekOffset = calculateWeekOffset(from: tempSelectedDate)
+                }
+                showDatePicker = false
+            }
+            .buttonStyle(.borderedProminent)
+
+            Button("Cancel", role: .cancel) {
+                showDatePicker = false
+            }
+        }
+        .frame(width: 320)
+        .padding()
+    }
+
+    // 📆 Hilfsfunktionen
     private func currentWeekDates() -> [Date] {
         let calendar = Calendar.current
         let today = Date()
         let offsetDate = calendar.date(byAdding: .weekOfYear, value: weekOffset, to: today)!
         let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: offsetDate))!
-        return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: startOfWeek) }
+        return (0 ..< 7).compactMap { calendar.date(byAdding: .day, value: $0, to: startOfWeek) }
     }
 
     private func currentWeekLabel() -> String {
@@ -191,9 +224,7 @@ struct TaskListView: View {
         let targetWeek = calendar.component(.weekOfYear, from: date)
         let currentYear = calendar.component(.yearForWeekOfYear, from: Date())
         let targetYear = calendar.component(.yearForWeekOfYear, from: date)
-
-        let weekDelta = (targetYear - currentYear) * 52 + (targetWeek - currentWeek)
-        return weekDelta
+        return (targetYear - currentYear) * 52 + (targetWeek - currentWeek)
     }
 
     private func weekInfo(for date: Date) -> String {
@@ -210,10 +241,6 @@ struct TaskListView: View {
         return formatter.string(from: date)
     }
 
-    private func moveTask(from source: IndexSet, to destination: Int) {
-        viewModel.moveTask(from: source, to: destination)
-    }
-
     private func taskCount(on date: Date) -> Int {
         viewModel.tasks.filter {
             guard let due = $0.dueDate else { return false }
@@ -224,7 +251,7 @@ struct TaskListView: View {
     private func weekDates(for referenceDate: Date) -> [Date] {
         let calendar = Calendar.current
         let startOfWeek = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: referenceDate))!
-        return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: startOfWeek) }
+        return (0 ..< 7).compactMap { calendar.date(byAdding: .day, value: $0, to: startOfWeek) }
     }
 
     private func taskCountsForCurrentWeek() -> [Date: Int] {

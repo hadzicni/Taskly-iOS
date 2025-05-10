@@ -9,17 +9,24 @@ struct CreateTaskView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
+            VStack(spacing: 24) {
+                VStack(alignment: .leading, spacing: 12) {
                     Text("Task Title")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
                     TextField("Enter title...", text: $title)
-                        .textFieldStyle(.roundedBorder)
+                        .padding(.horizontal)
+                        .padding(.vertical, 10)
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(Color.accentColor.opacity(0.15), lineWidth: 1)
+                        )
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 12) {
                     Text("Due Date & Time")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -34,6 +41,8 @@ struct CreateTaskView: View {
                         displayedComponents: [.date, .hourAndMinute]
                     )
                     .datePickerStyle(.graphical)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
 
                 Spacer()
@@ -43,10 +52,11 @@ struct CreateTaskView: View {
                     dismiss()
                 } label: {
                     Label("Create Task", systemImage: "plus")
+                        .labelStyle(.titleAndIcon)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding()
             .navigationTitle("New Task")

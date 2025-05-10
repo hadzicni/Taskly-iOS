@@ -7,114 +7,105 @@ enum TaskSection: String, CaseIterable, Identifiable {
     case upcoming = "Upcoming"
     case noDate = "No Due Date"
 
-    var id: String { self.rawValue }
+    var id: String { rawValue }
 }
 
 @Observable
 class TaskListViewModel {
     var showCompleted: Bool = true
     var tasks: [Task] = [] {
-        didSet {
-            saveTasks()
-        }
+        didSet { saveTasks() }
     }
 
-    private let saveURL: URL = {
-        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        return documents.appendingPathComponent("tasks.json")
-    }()
+    private let saveURL: URL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("tasks.json")
+
+    // MARK: - Init
 
     init() {
         loadTasks()
     }
 
-    func filteredTasks(on date: Date?, searchText: String = "") -> [Task] {
-        let base = tasks.filter { showCompleted || !$0.isCompleted }
+    // MARK: - Task Filtering
 
-        let dateFiltered: [Task]
-        if let date = date {
-            dateFiltered = base.filter { task in
-                guard let due = task.dueDate else { return false }
+    func filteredTasks(on date: Date?, searchText: String = "") -> [Task] {
+        tasks
+            .filter { showCompleted || !$0.isCompleted }
+            .filter {
+                guard let date else { return true }
+                guard let due = $0.dueDate else { return false }
                 return Calendar.current.isDate(due, inSameDayAs: date)
             }
-        } else {
-            dateFiltered = base
-        }
-
-        return searchText.isEmpty
-            ? dateFiltered
-            : dateFiltered.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+            .filter {
+                searchText.isEmpty || $0.title.localizedCaseInsensitiveContains(searchText)
+            }
     }
 
     func groupedTasks(on date: Date? = nil, searchText: String = "") -> [TaskSection: [Task]] {
-        let filtered = filteredTasks(on: date, searchText: searchText)
         let now = Date()
         let calendar = Calendar.current
 
         var grouped: [TaskSection: [Task]] = [
-            .overdue: [],
-            .today: [],
-            .upcoming: [],
-            .noDate: []
+            .overdue: [], .today: [], .upcoming: [], .noDate: [],
         ]
 
-        for task in filtered {
+        for task in filteredTasks(on: date, searchText: searchText) {
             if let due = task.dueDate {
                 if calendar.isDateInToday(due) {
-                    grouped[.today]?.append(task)
+                    grouped[.today, default: []].append(task)
                 } else if due < now {
-                    grouped[.overdue]?.append(task)
+                    grouped[.overdue, default: []].append(task)
                 } else {
-                    grouped[.upcoming]?.append(task)
+                    grouped[.upcoming, default: []].append(task)
                 }
             } else {
-                grouped[.noDate]?.append(task)
+                grouped[.noDate, default: []].append(task)
             }
         }
 
         return grouped
     }
 
-    func moveTask(from source: IndexSet, to destination: Int) {
-        tasks.move(fromOffsets: source, toOffset: destination)
-    }
+    // MARK: - Task Management
 
-    func addTask(title: String, dueDate: Date? = nil, notes: String? = nil) {
+    func addTask(title: String, dueDate: Date? = nil, notes _: String? = nil) {
         let newTask = Task(title: title, dueDate: dueDate)
         tasks.append(newTask)
         NotificationService.scheduleNotification(for: newTask)
     }
 
     func updateTask(_ task: Task, newTitle: String, newDueDate: Date?) {
-        if let index = tasks.firstIndex(where: { $0.id == task.id }) {
-            tasks[index].title = newTitle
-            tasks[index].dueDate = newDueDate
+        guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
+        tasks[index].title = newTitle
+        tasks[index].dueDate = newDueDate
 
-            NotificationService.removeNotification(for: task.id)
-            NotificationService.scheduleNotification(for: tasks[index])
-        }
+        NotificationService.removeNotification(for: task.id)
+        NotificationService.scheduleNotification(for: tasks[index])
     }
 
     func toggleCompletion(for task: Task) {
-        if let index = tasks.firstIndex(where: { $0.id == task.id }) {
-            tasks[index].isCompleted.toggle()
-        }
+        guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
+        tasks[index].isCompleted.toggle()
+    }
+
+    func moveTask(from source: IndexSet, to destination: Int) {
+        tasks.move(fromOffsets: source, toOffset: destination)
     }
 
     func deleteTask(at offsets: IndexSet) {
         let idsToDelete = offsets.map { tasks[$0].id }
         tasks.remove(atOffsets: offsets)
-        for id in idsToDelete {
-            NotificationService.removeNotification(for: id)
-        }
+        idsToDelete.forEach { NotificationService.removeNotification(for: $0) }
     }
+
+    // MARK: - Persistence
 
     private func saveTasks() {
         do {
             let data = try JSONEncoder().encode(tasks)
-            try data.write(to: saveURL, options: [.atomicWrite])
+            try data.write(to: saveURL, options: .atomic)
         } catch {
-            print("Error saving tasks: \(error)")
+            print("❌ Save error: \(error.localizedDescription)")
         }
     }
 
@@ -123,7 +114,7 @@ class TaskListViewModel {
             let data = try Data(contentsOf: saveURL)
             tasks = try JSONDecoder().decode([Task].self, from: data)
         } catch {
-            print("No saved tasks found or error decoding: \(error)")
+            print("ℹ️ No saved tasks or error decoding: \(error.localizedDescription)")
             tasks = []
         }
     }
