@@ -4,23 +4,39 @@ struct TaskRowView: View {
     let task: Task
     let toggle: () -> Void
 
+    @State private var isCompleted: Bool
+
+    init(task: Task, toggle: @escaping () -> Void) {
+        self.task = task
+        self.toggle = toggle
+        _isCompleted = State(initialValue: task.isCompleted)
+    }
+
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            Button(action: toggle) {
-                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    toggle()
+                    isCompleted.toggle()
+                }
+            }) {
+                Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title2)
-                    .foregroundStyle(task.isCompleted ? .green : .gray.opacity(0.3))
-                    .animation(.easeInOut(duration: 0.2), value: task.isCompleted)
+                    .foregroundStyle(isCompleted ? .green : .gray.opacity(0.5))
+                    .scaleEffect(isCompleted ? 1.2 : 1)
+                    .rotationEffect(.degrees(isCompleted ? 360 : 0))
             }
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(task.title)
                     .font(.body.weight(.medium))
-                    .foregroundStyle(task.isCompleted ? .secondary : .primary)
-                    .strikethrough(task.isCompleted, color: .gray.opacity(0.5))
+                    .foregroundStyle(isCompleted ? .secondary : .primary)
+                    .strikethrough(isCompleted, color: .gray.opacity(0.5))
                     .lineLimit(2)
                     .truncationMode(.tail)
+                    .opacity(isCompleted ? 0.6 : 1)
+                    .animation(.easeInOut(duration: 0.3), value: isCompleted)
 
                 if let due = task.dueDate {
                     Label(deadlineText(for: due), systemImage: "clock")

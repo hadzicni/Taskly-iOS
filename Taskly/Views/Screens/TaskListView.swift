@@ -15,21 +15,20 @@ struct TaskListView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                List {
-                    // 👋 Begrüßung
-                    Section {
-                        VStack(alignment: .leading, spacing: 4) {
+                ScrollView {
+                    // 📅 Kalenderbereich
+                    VStack(spacing: 16) {
+                        // 👋 Begrüßung
+                        VStack(alignment: .leading, spacing: 6) {
                             Text("👋 Hello,")
                                 .font(.title3)
                                 .foregroundStyle(.secondary)
                             Text(userName.isEmpty ? "you" : userName)
                                 .font(.largeTitle.bold())
                         }
-                        .padding(.vertical, 8)
-                    }
+                        .padding(.horizontal)
 
-                    // 📅 Kalenderbereich
-                    Section {
+                        // Kalender Auswahl
                         VStack(spacing: 12) {
                             Button {
                                 tempSelectedDate = selectedDate ?? Date()
@@ -77,63 +76,66 @@ struct TaskListView: View {
                                 .disabled(selectedDate != nil && Calendar.current.isDateInToday(selectedDate!))
                             }
                         }
-                        .padding(.vertical, 8)
+                        .padding()
+                        .background(.ultraThinMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .padding(.horizontal)
                     }
 
                     // 📝 Aufgabenliste
                     let tasks = viewModel.filteredTasks(on: selectedDate)
+
                     if tasks.isEmpty {
-                        Section {
-                            ContentUnavailableView("No Tasks", systemImage: "checkmark.circle")
-                        }
+                        ContentUnavailableView("No Tasks", systemImage: "checkmark.circle")
+                            .padding(.top, 20)
                     } else {
                         ForEach(TaskSection.allCases) { section in
                             let sectionTasks = viewModel.groupedTasks(on: selectedDate)[section, default: []]
                             if !sectionTasks.isEmpty {
-                                Section(header: Text(section.rawValue)) {
+                                VStack(spacing: 8) {
+                                    Text(section.rawValue)
+                                        .font(.headline)
+                                        .foregroundStyle(.primary)
+                                        .padding(.horizontal)
+
                                     ForEach(sectionTasks) { task in
                                         TaskRowView(task: task, toggle: {
                                             viewModel.toggleCompletion(for: task)
                                         })
-                                        .swipeActions {
-                                            Button(role: .destructive) {
-                                                if let index = viewModel.tasks.firstIndex(where: { $0.id == task.id }) {
-                                                    viewModel.deleteTask(at: IndexSet(integer: index))
-                                                }
-                                            } label: {
-                                                Label("Delete", systemImage: "trash")
-                                            }
-
-                                            Button {
-                                                editingTask = task
-                                            } label: {
-                                                Label("Edit", systemImage: "pencil")
-                                            }
-                                            .tint(.blue)
+                                        .onTapGesture {
+                                            editingTask = task
                                         }
+                                        .padding(.leading, 16) // Abstand links von den Tasks
                                     }
+                                    Divider()
+                                        .padding(.horizontal)
                                 }
                             }
                         }
                     }
                 }
-                .listStyle(.insetGrouped)
+                .padding(.top, 12)
 
-                Divider()
-
-                // ➕ Fixierter New Task Button
+                // ➕ New Task Button
                 Button {
                     showCreateSheet = true
                 } label: {
                     Label("New Task", systemImage: "plus")
                         .labelStyle(.titleAndIcon)
-                        .frame(maxWidth: .infinity)
+                        .font(.headline)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 24)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(.linearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        )
+                        .foregroundColor(.white) // Weißer Text und Icon
+                        .shadow(radius: 5) // Schatten für Tiefe
                 }
-                .buttonStyle(.borderedProminent)
-                .padding()
-                .background(.ultraThinMaterial)
+                .buttonStyle(.plain)
             }
-            .navigationTitle("")
+
+            .navigationTitle("Tasks")
             .popover(isPresented: $showDatePicker) {
                 DatePickerPopover
             }
