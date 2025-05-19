@@ -4,7 +4,7 @@ A clean and minimalistic **task management app** built for iOS using **SwiftUI**
 
 ![Platform](https://img.shields.io/badge/platform-iOS-blue?logo=apple)
 ![Swift](https://img.shields.io/badge/language-Swift-orange?logo=swift)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![Framework](https://img.shields.io/badge/framework-SwiftUI-informational)
 
 ---
