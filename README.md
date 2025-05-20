@@ -51,7 +51,6 @@ A clean and minimalistic **task management app** built for iOS using **SwiftUI**
 Taskly uses only native Apple frameworks:
 
 - SwiftUI
-- SwiftData
 - UserNotifications
 - Foundation
 
@@ -76,7 +75,6 @@ No third-party packages are required.
 ## 🧠 Model & Storage
 
 - `Task.swift`: Core model (id, title, dueDate, isCompleted, note)
-- Uses **SwiftData** for persistence
 - Notifications managed via `NotificationService.swift`
 
 ---
