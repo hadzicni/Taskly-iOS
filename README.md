@@ -27,10 +27,10 @@ A clean and minimalistic **task management app** built for iOS using **SwiftUI**
 
 ### Requirements
 
-- Xcode 15+
-- iOS 17+ simulator or device
+- Xcode 16.3+
+- iOS 18+ simulator or device
 - Swift 5.9+
-- macOS 13 Ventura or newer
+- macOS 15 Sequoia or newer
 
 ### 🧑‍💻 Run the App
 
