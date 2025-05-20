@@ -36,8 +36,8 @@ A clean and minimalistic **task management app** built for iOS using **SwiftUI**
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/hadzicni/Taskly-iOS.git
-   cd Taskly-iOS
+   git clone https://github.com/hadzicni/taskly-ios.git
+   cd taskly-ios
    ```
 
 2. Open `Taskly.xcodeproj` in Xcode.
